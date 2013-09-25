@@ -144,21 +144,27 @@ class CoolRepository:
 		self.openWikiManualHelpPage = settings.HelpPage().getOpenFromAbsolute(
 			'http://fabmetheus.crsndoo.com/wiki/index.php/Skeinforge_Cool')
 		self.activateCool = settings.BooleanSetting().getFromValue('Activate Cool', self, True)
-		self.bridgeCool = settings.FloatSpin().getFromValue(0.0, 'Bridge Cool (Celcius):', self, 10.0, 1.0)
+		settings.LabelDisplay().getFromName('- Fan settings (priority: top-down) -', self )
+		self.fanmaxPWM = settings.IntSpin().getFromValue(0, 'Full Fan Speed (0 - 255):', self, 255, 200)
+		self.turnFanOnAtBeginning = settings.BooleanSetting().getFromValue('Turn Fan On at Beginning', self, True)
+		self.fanFirstLayer = settings.IntSpin().getFromValue(0, 'Do Not Use Fan Before Layer (integer):', self, 100, 5)
+		self.bridgeFan = settings.BooleanSetting().getFromValue('Force Fan on Bridge Layers', self, False)
+		self.maximumFanLayerTime = settings.FloatSpin().getFromValue(0.0, 'Maximum Layer Time for Fan use (seconds):', self, 240.0, 40.0)
+		self.fullFanLayerTime = settings.FloatSpin().getFromValue(0.0, 'Full Fan Speed Bellow Layer Time (seconds):', self, 240.0, 20.0)
+		settings.LabelSeparator().getFromRepository(self)
 		self.coolType = settings.MenuButtonDisplay().getFromName('Cool Type:', self)
 		self.orbit = settings.MenuRadio().getFromMenuButtonDisplay(self.coolType, 'Orbit', self, False)
 		self.slowDown = settings.MenuRadio().getFromMenuButtonDisplay(self.coolType, 'Slow Down', self, True)
 		self.maximumCool = settings.FloatSpin().getFromValue(0.0, 'Maximum Cool (Celcius):', self, 10.0, 2.0)
 		self.minimumLayerTime = settings.FloatSpin().getFromValue(0.0, 'Minimum Layer Time (seconds):', self, 120.0, 60.0)
-		self.minimumOrbitalRadius = settings.FloatSpin().getFromValue(
-			0.0, 'Minimum Orbital Radius (millimeters):', self, 20.0, 10.0)
+		self.minimumOrbitalRadius = settings.FloatSpin().getFromValue(0.0, 'Minimum Orbital Radius (millimeters):', self, 20.0, 10.0)
 		settings.LabelSeparator().getFromRepository(self)
 		settings.LabelDisplay().getFromName('- Name of Alteration Files -', self )
 		self.nameOfCoolEndFile = settings.StringSetting().getFromValue('Name of Cool End File:', self, 'cool_end.gcode')
 		self.nameOfCoolStartFile = settings.StringSetting().getFromValue('Name of Cool Start File:', self, 'cool_start.gcode')
 		settings.LabelSeparator().getFromRepository(self)
+		self.bridgeCool = settings.FloatSpin().getFromValue(0.0, 'Bridge Cool (Celcius):', self, 10.0, 1.0)
 		self.orbitalOutset = settings.FloatSpin().getFromValue(1.0, 'Orbital Outset (millimeters):', self, 5.0, 2.0)
-		self.turnFanOnAtBeginning = settings.BooleanSetting().getFromValue('Turn Fan On at Beginning', self, True)
 		self.turnFanOffAtEnding = settings.BooleanSetting().getFromValue('Turn Fan Off at Ending', self, True)
 		self.executeTitle = 'Cool'
 
@@ -330,7 +336,7 @@ class CoolSkein:
 			elif firstWord == '(<edgeWidth>':
 				self.edgeWidth = float(splitLine[1])
 				if self.repository.turnFanOnAtBeginning.value:
-					self.distanceFeedRate.addLine('M106')
+					self.distanceFeedRate.addLine('M106 S%d' % (self.repository.fanmaxPWM.value) )
 			elif firstWord == '(</extruderInitialization>)':
 				self.distanceFeedRate.addTagBracketedProcedure('cool')
 				return
@@ -366,9 +372,23 @@ class CoolSkein:
 			self.boundaryLoop.append(gcodec.getLocationFromSplitLine(None, splitLine).dropAxis())
 		elif firstWord == '(<layer>':
 			self.layerCount.printProgressIncrement('cool')
+			"print 'Layer %d' % (self.layerCount.layerIndex)"
 			self.distanceFeedRate.addLine(line)
 			self.distanceFeedRate.addLinesSetAbsoluteDistanceMode(self.coolStartLines)
 			layerTime = self.getLayerTime()
+			"print 'Layer time : %5.3f' % (layerTime)"
+			if not self.repository.turnFanOnAtBeginning.value and self.layerCount.layerIndex >= self.repository.fanFirstLayer.value:
+				if (self.repository.bridgeFan.value and self.isBridgeLayer) or layerTime <= self.repository.fullFanLayerTime.value:
+					self.distanceFeedRate.addLine( 'M106 S%d' % (self.repository.fanmaxPWM.value) )
+					"print 'Full Fan Speed ! (Layer time is under %5.3f' % (self.repository.fullFanLayerTime.value)"
+				elif layerTime <= self.repository.maximumFanLayerTime.value:
+					fanPWMArea = ( self.repository.maximumFanLayerTime.value - self.repository.fullFanLayerTime.value )
+					fanPWM = round( ( ( self.repository.maximumFanLayerTime.value - layerTime ) / fanPWMArea ) * self.repository.fanmaxPWM.value )
+					self.distanceFeedRate.addLine( 'M106 S%d' % (fanPWM) )
+					"print 'PWM Fan Speed (fanPWMArea : %5.3f / fanPWM : %d)' % (fanPWMArea, fanPWM)"
+				else:
+					self.distanceFeedRate.addLine( 'M107' )
+					"print 'Fan Off (Layer time is above %5.3f)' % (self.repository.maximumFanLayerTime.value)"
 			remainingOrbitTime = max(self.repository.minimumLayerTime.value - layerTime, 0.0)
 			self.addCoolTemperature(remainingOrbitTime)
 			if self.repository.orbit.value:
