@@ -143,6 +143,7 @@ class SkirtRepository:
 		self.gapOverEdgeWidth = settings.FloatSpin().getFromValue(0.0, 'Gap over Perimeter Width (ratio):', self, 5.0, 3.0)
 		self.layersTo = settings.IntSpin().getSingleIncrementFromValue(0, 'Layers To (index):', self, 912345678, 1)
 		self.brimWidth = settings.IntSpin().getSingleIncrementFromValue(0, 'Brim Width:', self, 50, 0)
+		self.brimHeight = settings.IntSpin().getSingleIncrementFromValue(0, 'Brim Height:', self, 50, 0)
 		self.executeTitle = 'Skirt'
 
 	def execute(self):
@@ -337,7 +338,7 @@ class SkirtSkein:
 			self.layerIndex += 1
 			if self.layerIndex < self.repository.layersTo.value:
 				self.addSkirt(float(splitLine[1]))
-			if (self.layerIndex < 1) and (self.repository.brimWidth.value > 0):
+			if (self.repository.brimWidth.value > 0) and (self.layerIndex < self.repository.brimHeight.value):
 				self.addBrim(float(splitLine[1]))
 		elif firstWord == 'M101':
 			self.isExtruderActive = True
