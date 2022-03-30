@@ -1982,7 +1982,7 @@ class RepositoryDialog:
 		title = repository.title
 		if repository.fileNameInput != None:
 			title = os.path.basename( repository.fileNameInput.value ) + ' - ' + title
-		root.title( title )
+		root.title( "SF50+ " + title )
 		fileHelpMenuBar = FileHelpMenuBar( root )
 		fileHelpMenuBar.completeMenu( self.close, repository, self.save, self )
 		for setting in repository.displayEntities:
