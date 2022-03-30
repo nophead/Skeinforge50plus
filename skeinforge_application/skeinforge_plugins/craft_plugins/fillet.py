@@ -265,6 +265,7 @@ class ArcSegmentSkein( BevelSkein ):
 		absoluteDifferenceAngle = abs( afterCenterDifferenceAngle )
 #		steps = int( math.ceil( absoluteDifferenceAngle * 1.5 ) )
 		steps = int( math.ceil( min( absoluteDifferenceAngle * 1.5, absoluteDifferenceAngle * abs( beforeCenterSegment ) / self.curveSection ) ) )
+		if steps < 1: steps = 1
 		stepPlaneAngle = euclidean.getWiddershinsUnitPolar( afterCenterDifferenceAngle / steps )
 		for step in xrange( 1, steps ):
 			beforeCenterSegment = euclidean.getRoundZAxisByPlaneAngle( stepPlaneAngle, beforeCenterSegment )
