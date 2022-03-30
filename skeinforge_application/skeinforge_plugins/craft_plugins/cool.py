@@ -190,8 +190,6 @@ class CoolSkein:
 		self.lineIndex = 0
 		self.lines = None
 		self.multiplier = 1.0
-		self.oldFlowRate = None
-		self.oldFlowRateString = None
 		self.oldLocation = None
 		self.oldTemperature = None
 
@@ -230,11 +228,6 @@ class CoolSkein:
 		if self.oldTemperature != None and layerCool != 0.0:
 			self.coolTemperature = self.oldTemperature - layerCool
 			self.addTemperature(self.coolTemperature)
-
-	def addFlowRate(self, flowRate):
-		'Add a multipled line of flow rate if different.'
-		if flowRate != None:
-			self.distanceFeedRate.addLine('M108 S' + euclidean.getFourSignificantFigures(flowRate))
 
 	def addGcodeFromFeedRateMovementZ(self, feedRateMinute, point, z):
 		'Add a movement to the output.'
@@ -331,17 +324,13 @@ class CoolSkein:
 			splitLine = gcodec.getSplitLineBeforeBracketSemicolon(line)
 			firstWord = gcodec.getFirstWord(splitLine)
 			self.distanceFeedRate.parseSplitLine(firstWord, splitLine)
-			if firstWord == 'M108':
-				self.oldFlowRate = float(splitLine[1][1 :])
-			elif firstWord == '(<edgeWidth>':
+			if firstWord == '(<edgeWidth>':
 				self.edgeWidth = float(splitLine[1])
 				if self.repository.turnFanOnAtBeginning.value:
 					self.distanceFeedRate.addLine('M106 S%d' % (self.repository.fanmaxPWM.value) )
 			elif firstWord == '(</extruderInitialization>)':
 				self.distanceFeedRate.addTagBracketedProcedure('cool')
 				return
-			elif firstWord == '(<operatingFlowRate>':
-				self.oldFlowRate = float(splitLine[1])
 			elif firstWord == '(<orbitalFeedRatePerSecond>':
 				self.orbitalFeedRatePerSecond = float(splitLine[1])
 			self.distanceFeedRate.addLine(line)
@@ -364,10 +353,6 @@ class CoolSkein:
 			self.isExtruderActive = False
 		elif firstWord == 'M104':
 			self.oldTemperature = gcodec.getDoubleAfterFirstLetter(splitLine[1])
-		elif firstWord == 'M108':
-			self.oldFlowRate = float(splitLine[1][1 :])
-			self.addFlowRate(self.multiplier * self.oldFlowRate)
-			return
 		elif firstWord == '(<boundaryPoint>':
 			self.boundaryLoop.append(gcodec.getLocationFromSplitLine(None, splitLine).dropAxis())
 		elif firstWord == '(<layer>':
@@ -395,7 +380,6 @@ class CoolSkein:
 				self.addOrbitsIfNecessary(remainingOrbitTime)
 			else:
 				self.setMultiplier(remainingOrbitTime)
-				self.addFlowRate(self.multiplier * self.oldFlowRate)
 			z = float(splitLine[1])
 			self.boundaryLayer = euclidean.LoopLayer(z)
 			self.highestZ = max(z, self.highestZ)
@@ -407,7 +391,6 @@ class CoolSkein:
 			if self.coolTemperature != None:
 				self.addTemperature(self.oldTemperature)
 				self.coolTemperature = None
-			self.addFlowRate(self.oldFlowRate)
 		elif firstWord == '(<nestedRing>)':
 			self.boundaryLoop = []
 			self.boundaryLayer.loops.append(self.boundaryLoop)
