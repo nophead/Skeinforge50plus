@@ -242,7 +242,7 @@ class StatisticSkein:
 			crossSectionArea *= self.volumeFraction
 		self.extrusionDiameter = math.sqrt(4.0 * crossSectionArea / math.pi)
 		volumeExtruded = 0.001 * crossSectionArea * self.totalDistanceExtruded
-		mass = volumeExtruded / repository.density.value
+		mass = volumeExtruded * repository.density.value / 1000000.0
 		machineTimeCost = repository.machineTime.value * self.totalBuildTime / 3600.0
 		materialCost = repository.material.value * mass
 		self.addLine(' ')
