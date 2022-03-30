@@ -270,6 +270,7 @@ class TowerSkein:
 				if not hasTravelledHighRoad:
 					hasTravelledHighRoad = True
 					self.addHighThread(location)
+					self.highestZ = location.z
 				if location.z > self.highestZ:
 					self.highestZ = location.z
 				self.oldLocation = location
