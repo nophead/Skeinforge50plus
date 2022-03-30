@@ -214,10 +214,10 @@ class ChamberRepository:
 		self.bedTemperature = settings.FloatSpin().getFromValue(20.0, 'Bed Temperature (Celcius):', self, 90.0, 60.0)
 		self.bedTemperatureBeginChangeHeight = settings.FloatSpin().getFromValue(-1.0, 'Bed Temperature Begin Change Height (mm):', self, 20.0, -1.0)
 		self.bedTemperatureEndChangeHeight = settings.FloatSpin().getFromValue(-1.0, 'Bed Temperature End Change Height (mm):', self, 40.0, -1.0)
-		self.bedTemperatureEnd = settings.FloatSpin().getFromValue(20.0, 'Bed Temperature End (Celcius):', self, 90.0, 20.0)
+		self.bedTemperatureEnd = settings.FloatSpin().getFromValue(20.0, 'Bed Temperature End (Celcius):', self, 150.0, 20.0)
+		self.bedCoolTemperature = settings.FloatSpin().getFromValue(20.0, 'Bed Cooldown Temperature (Celcius):', self, 50.0, 25.0)
 		settings.LabelSeparator().getFromRepository(self)
 		self.chamberTemperature = settings.FloatSpin().getFromValue( 20.0, 'Chamber Temperature (Celcius):', self, 90.0, 30.0 )
-		self.holdingForce = settings.FloatSpin().getFromValue( 0.0, 'Holding Force (bar):', self, 100.0, 0.0 )
 		self.executeTitle = 'Chamber'
 
 	def execute(self):
@@ -278,7 +278,6 @@ class ChamberSkein:
 			self.distanceFeedRate.addLine(line)
 			self.addBedTemperature(self.repository.bedTemperature.value)
 			self.distanceFeedRate.addParameter('M141', self.repository.chamberTemperature.value) # Set chamber temperature.
-			self.distanceFeedRate.addParameter('M142', self.repository.holdingForce.value) # Set holding pressure.
 			return
 		self.distanceFeedRate.addLine(line)
 		if firstWord == '(<layer>' and self.changeWidth != None:
