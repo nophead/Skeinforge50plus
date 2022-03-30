@@ -24,6 +24,7 @@ Defines the ratio of the feed rate (head speed) on the bridge layers over the fe
 Default is one.
 
 Defines the ratio of the flow rate (extruder speed) on the bridge layers over the flow rate of the typical non bridge layers.
+Defines the ratio of the flow rate (extruder speed) on the bridge layers over the flow rate of the typical non bridge layers.
 
 ===Duty Cyle===
 ====Duty Cyle at Beginning====
@@ -174,35 +175,24 @@ class SpeedRepository:
 		self.fileNameInput = settings.FileNameInput().getFromFileName( fabmetheus_interpret.getGNUTranslatorGcodeFileTypeTuples(), 'Open File for Speed', self, '')
 		self.openWikiManualHelpPage = settings.HelpPage().getOpenFromAbsolute('http://fabmetheus.crsndoo.com/wiki/index.php/Skeinforge_Speed')
 		self.activateSpeed = settings.BooleanSetting().getFromValue('Activate Speed', self, True )
-		self.addFlowRate = settings.BooleanSetting().getFromValue('Add Flow Rate:', self, True )
 		settings.LabelSeparator().getFromRepository(self)
 		settings.LabelDisplay().getFromName('- Bridge -', self )
 		self.bridgeFeedRateMultiplier = settings.FloatSpin().getFromValue( 0.8, 'Bridge Feed Rate Multiplier (ratio):', self, 1.2, 1.0 )
-		self.bridgeFlowRateMultiplier = settings.FloatSpin().getFromValue( 0.8, 'Bridge Flow Rate Multiplier (ratio):', self, 1.2, 1.0 )
 		settings.LabelSeparator().getFromRepository(self)
-		settings.LabelDisplay().getFromName('- Duty Cyle -', self )
-		self.dutyCycleAtBeginning = settings.FloatSpin().getFromValue( 0.0, 'Duty Cyle at Beginning (portion):', self, 1.0, 1.0 )
-		self.dutyCycleAtEnding = settings.FloatSpin().getFromValue( 0.0, 'Duty Cyle at Ending (portion):', self, 1.0, 0.0 )
 		settings.LabelSeparator().getFromRepository(self)
 		self.feedRatePerSecond = settings.FloatSpin().getFromValue( 2.0, 'Feed Rate (mm/s):', self, 50.0, 16.0 )
-		self.flowRateSetting = settings.FloatSpin().getFromValue( 50.0, 'Flow Rate Setting (float):', self, 250.0, 210.0 )
 		settings.LabelSeparator().getFromRepository(self)
 		settings.LabelDisplay().getFromName('- Object First Layer -', self)
 		self.objectFirstLayerFeedRateInfillMultiplier = settings.FloatSpin().getFromValue(
 			0.2, 'Object First Layer Feed Rate Infill Multiplier (ratio):', self, 1.0, 0.4)
 		self.objectFirstLayerFeedRatePerimeterMultiplier = settings.FloatSpin().getFromValue(
 			0.2, 'Object First Layer Feed Rate Perimeter Multiplier (ratio):', self, 1.0, 0.4)
-		self.objectFirstLayerFlowRateInfillMultiplier = settings.FloatSpin().getFromValue(
-			0.2, 'Object First Layer Flow Rate Infill Multiplier (ratio):', self, 1.0, 0.4)
-		self.objectFirstLayerFlowRatePerimeterMultiplier = settings.FloatSpin().getFromValue(
-			0.2, 'Object First Layer Flow Rate Perimeter Multiplier (ratio):', self, 1.0, 0.4)
 		settings.LabelSeparator().getFromRepository(self)
 		self.orbitalFeedRateOverOperatingFeedRate = settings.FloatSpin().getFromValue( 0.1, 'Orbital Feed Rate over Operating Feed Rate (ratio):', self, 0.9, 0.5 )
 		self.maximumZFeedRatePerSecond = settings.FloatSpin().getFromValue(0.5, 'Maximum Z Feed Rate (mm/s):', self, 10.0, 1.0)
 		settings.LabelSeparator().getFromRepository(self)
 		settings.LabelDisplay().getFromName('- Perimeter -', self )
 		self.perimeterFeedRateMultiplier = settings.FloatSpin().getFromValue(0.5, 'Perimeter Feed Rate Multiplier (ratio):', self, 1.0, 1.0)
-		self.perimeterFlowRateMultiplier = settings.FloatSpin().getFromValue(0.5, 'Perimeter Flow Rate Multiplier (ratio):', self, 1.0, 1.0)
 		settings.LabelSeparator().getFromRepository(self)
 		self.travelFeedRatePerSecond = settings.FloatSpin().getFromValue( 2.0, 'Travel Feed Rate (mm/s):', self, 50.0, 16.0 )
 		self.executeTitle = 'Speed'
@@ -226,25 +216,6 @@ class SpeedSkein:
 		self.layerIndex = -1
 		self.lineIndex = 0
 		self.lines = None
-		self.oldFlowRate = None
-
-	def addFlowRateLine(self):
-		"Add flow rate line."
-		if not self.repository.addFlowRate.value:
-			return
-		flowRate = self.repository.flowRateSetting.value
-		if self.isBridgeLayer:
-			flowRate *= self.repository.bridgeFlowRateMultiplier.value
-		if self.isEdgePath:
-			flowRate *= self.repository.perimeterFlowRateMultiplier.value
-		if self.layerIndex == 0:
-			if self.isEdgePath:
-				flowRate *= self.repository.objectFirstLayerFlowRatePerimeterMultiplier.value
-			else:
-				flowRate *= self.repository.objectFirstLayerFlowRateInfillMultiplier.value
-		if flowRate != self.oldFlowRate:
-			self.distanceFeedRate.addLine('M108 S' + euclidean.getFourSignificantFigures(flowRate))
-		self.oldFlowRate = flowRate
 
 	def addParameterString( self, firstWord, parameterWord ):
 		"Add parameter string."
@@ -262,7 +233,6 @@ class SpeedSkein:
 		self.parseInitialization()
 		for line in self.lines[self.lineIndex :]:
 			self.parseLine(line)
-		self.addParameterString('M113', self.repository.dutyCycleAtEnding.value ) # Set duty cycle .
 		return self.distanceFeedRate.output.getvalue()
 
 	def getSpeededLine(self, line, splitLine):
@@ -270,16 +240,16 @@ class SpeedSkein:
 		if gcodec.getIndexOfStartingWithSecond('F', splitLine) > 0:
 			return line
 		feedRateMinute = 60.0 * self.feedRatePerSecond
+		perimeterMultiplier = self.repository.perimeterFeedRateMultiplier.value
 		if self.isBridgeLayer:
 			feedRateMinute *= self.repository.bridgeFeedRateMultiplier.value
 		if self.isEdgePath:
-			feedRateMinute *= self.repository.perimeterFeedRateMultiplier.value
+			feedRateMinute *= perimeterMultiplier if perimeterMultiplier != 0 else self.constantFlow
 		if self.layerIndex == 0:
 			if self.isEdgePath:
 				feedRateMinute *= self.repository.objectFirstLayerFeedRatePerimeterMultiplier.value
 			else:
 				feedRateMinute *= self.repository.objectFirstLayerFeedRateInfillMultiplier.value
-		self.addFlowRateLine()
 		if not self.isExtruderActive:
 			feedRateMinute = self.travelFeedRateMinute
 		return self.distanceFeedRate.getLineWithFeedRate(feedRateMinute, line, splitLine)
@@ -295,15 +265,17 @@ class SpeedSkein:
 				self.layerHeight = float(splitLine[1])
 			elif firstWord == '(</extruderInitialization>)':
 				self.distanceFeedRate.addTagBracketedProcedure('speed')
+				self.constantFlow = self.infillWidth * self.volumeFraction / (self.absoluteEdgeWidth - self.layerHeight * (1 - math.pi / 4))
 				return
+			elif firstWord == '(<infillWidth>':
+				self.infillWidth = float(splitLine[1])
+			elif firstWord == '(<volumeFraction>':
+				self.volumeFraction = float(splitLine[1])
 			elif firstWord == '(<edgeWidth>':
 				self.absoluteEdgeWidth = abs(float(splitLine[1]))
 				self.distanceFeedRate.addTagBracketedLine('maximumZFeedRatePerSecond', self.repository.maximumZFeedRatePerSecond.value )
 				self.distanceFeedRate.addTagBracketedLine('objectFirstLayerFeedRateInfillMultiplier', self.repository.objectFirstLayerFeedRateInfillMultiplier.value)
 				self.distanceFeedRate.addTagBracketedLine('operatingFeedRatePerSecond', self.feedRatePerSecond )
-				if self.repository.addFlowRate.value:
-					self.distanceFeedRate.addTagBracketedLine('objectFirstLayerFlowRateInfillMultiplier', self.repository.objectFirstLayerFlowRateInfillMultiplier.value)
-					self.distanceFeedRate.addTagBracketedLine('operatingFlowRate', self.repository.flowRateSetting.value )
 				orbitalFeedRatePerSecond = self.feedRatePerSecond * self.repository.orbitalFeedRateOverOperatingFeedRate.value
 				self.distanceFeedRate.addTagBracketedLine('orbitalFeedRatePerSecond', orbitalFeedRatePerSecond )
 				self.distanceFeedRate.addTagBracketedLine('travelFeedRatePerSecond', self.repository.travelFeedRatePerSecond.value )
@@ -315,11 +287,7 @@ class SpeedSkein:
 		if len(splitLine) < 1:
 			return
 		firstWord = splitLine[0]
-		if firstWord == '(<crafting>)':
-			self.distanceFeedRate.addLine(line)
-			self.addParameterString('M113', self.repository.dutyCycleAtBeginning.value ) # Set duty cycle .
-			return
-		elif firstWord == 'G1':
+		if firstWord == 'G1':
 			line = self.getSpeededLine(line, splitLine)
 		elif firstWord == 'M101':
 			self.isExtruderActive = True
@@ -331,7 +299,6 @@ class SpeedSkein:
 			self.layerIndex += 1
 			settings.printProgress(self.layerIndex, 'speed')
 			self.isBridgeLayer = False
-			self.addFlowRateLine()
 		elif firstWord == '(<edge>' or firstWord == '(<edgePath>)':
 			self.isEdgePath = True
 		elif firstWord == '(</edge>)' or firstWord == '(</edgePath>)':
