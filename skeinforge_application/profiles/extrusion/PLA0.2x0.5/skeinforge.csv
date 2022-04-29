@@ -1,0 +1,9 @@
+Format is tab separated skeinforge settings.
+_Name                          	Value
+WindowPosition	254+131
+Open File for Skeinforge	D:/CHRIS/Projects/RepRaptor/Variac/stls/ESP12F_carrier.stl
+analyze	False
+craft	True
+help	False
+meta	False
+profile	False

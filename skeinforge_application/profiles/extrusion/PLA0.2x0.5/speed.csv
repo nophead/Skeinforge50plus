@@ -1,0 +1,13 @@
+Format is tab separated speed settings.
+_Name                          	Value
+WindowPosition	700+0
+Open File for Speed	
+Activate Speed	True
+Bridge Feed Rate Multiplier (ratio):	1.0
+Feed Rate (mm/s):	40.0
+Object First Layer Feed Rate Infill Multiplier (ratio):	0.25
+Object First Layer Feed Rate Perimeter Multiplier (ratio):	0.25
+Orbital Feed Rate over Operating Feed Rate (ratio):	0.5
+Maximum Z Feed Rate (mm/s):	8.0
+Perimeter Feed Rate Multiplier (ratio):	0.0
+Travel Feed Rate (mm/s):	200.0
