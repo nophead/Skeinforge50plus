@@ -277,7 +277,8 @@ class ChamberSkein:
 		if firstWord == '(<crafting>)':
 			self.distanceFeedRate.addLine(line)
 			self.addBedTemperature(self.repository.bedTemperature.value)
-			self.distanceFeedRate.addParameter('M141', self.repository.chamberTemperature.value) # Set chamber temperature.
+			if(self.repository.chamberTemperature.value):
+				self.distanceFeedRate.addParameter('M141', self.repository.chamberTemperature.value) # Set chamber temperature.
 			return
 		self.distanceFeedRate.addLine(line)
 		if firstWord == '(<layer>' and self.changeWidth != None:
